@@ -1,0 +1,51 @@
+@import url("https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap");
+%mono {
+	font-family: "Fira Code";
+}
+body {
+	font: 20pt "Noto Sans";
+	background-color: #000;
+	color: #fff;
+	& > table {
+		border-collapse: collapse;
+		width: 100%;
+		& > tbody > tr {
+			& > th,
+			& > td {
+				border: 1px solid white;
+				padding: 10px;
+				text-align: center;
+			}
+			&#controls > td > kbd {
+				@extend %mono;
+				&::before {
+					content: "[";
+				}
+				&::after {
+					content: "]";
+				}
+			}
+			&#stats > td {
+				@extend %mono;
+				&#hp {
+					color: #0f0;
+				}
+				&#mana {
+					color: #80f;
+				}
+				&#atk {
+					color: #f00;
+				}
+				&#def {
+					color: #00f;
+				}
+				&#gold {
+					color: #ff0;
+					&::before {
+						content: "$";
+					}
+				}
+			}
+		}
+	}
+}

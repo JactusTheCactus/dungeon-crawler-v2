@@ -1,0 +1,66 @@
+mixin key(key,text)
+	td
+		kbd= key.toUpperCase()
+		|
+		|
+		= text
+mixin empty(cells)
+	- i = 0
+	tr: while i < cells
+		td- i++
+mixin span(text,col,row,header=false)
+	-
+		span = {
+			colspan: col,
+			rowspan: row
+		}
+	if header
+		th&attributes(span)= text
+	else
+		td&attributes(span)= text
+doctype html
+html
+	head: link(
+		rel="stylesheet"
+		href="style.css"
+	)
+	body
+		table
+			tr: +span("TUI Dungeon Crawler Layout",7,1,true)
+			+empty(7)
+			tr#controls
+				td
+				+key("esc","Quit Game")
+				+key("q","Return to Main View")
+				+key("w","Pick-up Item(s)")
+				+key("e","Drop Item(s)")
+				+key("r","Open Inv.")
+				td
+			tr
+				td
+				+span("View",3,3)
+				+span("Logs",2,3)
+				td
+			+empty(2)
+			+empty(2)
+			tr#stats
+				td
+				td#hp HP Cur/Max
+				td#mana Mana
+				td#atk Atk
+				td#def Def
+				td#gold Gold.2f
+				td
+			+empty(7)
+		ul
+			li
+				code Pick-up/Drop Item(s)
+				| ,
+				|
+				code Open Inv.
+				| , etc. fill the
+				|
+				code View
+				|
+				| panel
+			li Game is cross-platform (any OS / screen), via Rust + Ratatui

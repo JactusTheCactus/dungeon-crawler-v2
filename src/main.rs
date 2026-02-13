@@ -8,8 +8,8 @@ use {
 		Frame, Terminal,
 		backend::CrosstermBackend,
 		layout::{Constraint, Direction, Layout},
-		style::{Modifier, Style},
-		widgets::{Block, BorderType, List, ListItem},
+		style::{Color, Modifier, Style},
+		widgets::{Block, BorderType, List, ListItem, Row, Table},
 	},
 	std::{
 		default::Default,
@@ -28,9 +28,18 @@ fn main() -> Result<(), Box<dyn Error>> {
 	terminal.show_cursor()?;
 	res
 }
-// struct State {
-// inventory: Vec<(u8, String)>,
-// }
+#[derive(Default)]
+enum View {
+	#[default]
+	Main,
+	Inv,
+	PickUp,
+	Drop,
+}
+struct State {
+	view: View,
+	nearby_items: Vec<(u8, String)>, // inventory: Vec<(u8, String)>,
+}
 #[derive(Default)]
 enum Mode {
 	#[default]
@@ -38,14 +47,23 @@ enum Mode {
 	// Add,
 	// Drop,
 }
+fn block<'a>() -> Block<'a> {
+	Block::bordered().border_type(BorderType::Thick)
+}
+fn style() -> Style {
+	Style::new()
+}
 struct App {
-	// state: State,
+	state: State,
 	mode: Mode,
 }
 impl App {
 	fn new() -> Self {
 		Self {
-			// state: State { inventory: vec![] },
+			state: State {
+				view: View::default(),
+				nearby_items: vec![(1u8, "Sword".to_string()), (1u8, "Shield".to_string())],
+			},
 			mode: Mode::default(),
 		}
 	}
@@ -57,60 +75,120 @@ impl App {
 	}
 	fn render(&self, frame: &mut Frame) {
 		let layout = Layout::new(
-			Direction::Horizontal,
-			[Constraint::Fill(1), Constraint::Fill(4)],
+			Direction::Vertical,
+			[
+				Constraint::Fill(1),
+				Constraint::Fill(3),
+				Constraint::Fill(1),
+			],
 		)
 		.split(frame.area());
-		let left = Layout::new(
-			Direction::Vertical,
-			[Constraint::Fill(1), Constraint::Fill(4)],
-		)
-		.split(layout[0]);
-		let inv_block = Block::bordered()
-			.border_type(BorderType::Thick)
-			.title("Inventory")
+		let con = layout[0];
+		let con_block = block()
+			.title("Controls")
 			.title_style(Style::new().add_modifier(Modifier::BOLD));
-		frame.render_widget(&inv_block, left[0]);
-		let mut inv_vec = vec![];
+		frame.render_widget(&con_block, con);
+		let mut con_vec = vec![];
 		for (c, s) in [
-			('Q', "Add Items"),
-			('W', "Drop Items"),
-			('E', "Open Inventory"),
+			(KeyCode::Esc, "Quit Game"),
+			(KeyCode::Char('q'), "Return to Main"),
+			(KeyCode::Char('w'), "Pick-up Item(s)"),
+			(KeyCode::Char('e'), "Drop Item(s)"),
+			(KeyCode::Char('r'), "Open Inventory"),
 		] {
-			inv_vec.push(ListItem::new(format!("[{c}] {s}")))
+			con_vec.push(format!("[{}] {s}", c.to_string().to_uppercase()))
 		}
-		frame.render_widget(List::new(inv_vec), inv_block.clone().inner(left[0]));
-		let menu_block = Block::bordered()
-			.border_type(BorderType::Thick)
-			.title("Menu")
+		let mut widths = vec![];
+		for _ in 0..3 {
+			widths.push(Constraint::Fill(1));
+		}
+		let mut rows = vec![];
+		let mut row = vec![];
+		for (i, n) in con_vec.clone().into_iter().enumerate() {
+			row.push(n);
+			if (i + 1) % 3 == 0 {
+				rows.push(Row::new(row));
+				row = vec![];
+			}
+		}
+		rows.push(Row::new(row));
+		frame.render_widget(Table::new(rows, widths), con_block.clone().inner(con));
+		let middle = Layout::new(
+			Direction::Horizontal,
+			[Constraint::Fill(3), Constraint::Fill(2)],
+		)
+		.split(layout[1]);
+		let view_block = block()
+			.title("View")
 			.title_style(Style::new().add_modifier(Modifier::BOLD));
-		frame.render_widget(&menu_block, left[1]);
-		let mut menu_vec = vec![];
-		for (c, s) in [(1u8, "Sword"), (1u8, "Shield")] {
-			menu_vec.push(ListItem::new(format!("{s}×{c}")))
+		frame.render_widget(&view_block, middle[0]);
+		match self.state.view {
+			View::Main => {}
+			View::Inv => {
+				let mut view_vec = vec![];
+				for (c, s) in &self.state.nearby_items {
+					view_vec.push(ListItem::new(format!("{s}×{c}")))
+				}
+				frame.render_widget(List::new(view_vec), view_block.clone().inner(middle[0]));
+			}
+			View::PickUp => {}
+			View::Drop => {}
 		}
-		frame.render_widget(List::new(menu_vec), menu_block.clone().inner(left[1]));
 		frame.render_widget(
-			Block::bordered()
-				.border_type(BorderType::Thick)
+			block()
 				.title("Logs")
 				.title_style(Style::new().add_modifier(Modifier::BOLD)),
-			layout[1],
+			middle[1],
+		);
+		let stats = Layout::new(
+			Direction::Horizontal,
+			[
+				Constraint::Fill(1),
+				Constraint::Fill(1),
+				Constraint::Fill(1),
+				Constraint::Fill(1),
+				Constraint::Fill(1),
+			],
+		)
+		.split(layout[2]);
+		frame.render_widget(
+			block().title("HP").border_style(style().fg(Color::Green)),
+			stats[0],
+		);
+		frame.render_widget(
+			block()
+				.title("Mana")
+				.border_style(style().fg(Color::Magenta)),
+			stats[1],
+		);
+		frame.render_widget(
+			block().title("Atk").border_style(style().fg(Color::Red)),
+			stats[2],
+		);
+		frame.render_widget(
+			block().title("Def").border_style(style().fg(Color::Blue)),
+			stats[3],
+		);
+		frame.render_widget(
+			block()
+				.title("Gold")
+				.border_style(style().fg(Color::Yellow)),
+			stats[4],
 		);
 	}
 }
 fn run(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<(), Box<dyn Error>> {
-	let app = App::new();
+	let mut app = App::new();
 	loop {
 		app.update();
 		terminal.draw(|frame| app.render(frame))?;
 		if let Event::Key(key) = event::read()? {
 			match key.code {
 				KeyCode::Esc => break,
-				KeyCode::Up | KeyCode::Char('w') | KeyCode::Char('k') => {}
-				KeyCode::Down | KeyCode::Char('s') | KeyCode::Char('j') => {}
-				KeyCode::Left | KeyCode::Char('a') | KeyCode::Char('h') => {}
-				KeyCode::Right | KeyCode::Char('d') | KeyCode::Char('l') => {}
+				KeyCode::Char('q') => app.state.view = View::Main,
+				KeyCode::Char('w') => app.state.view = View::PickUp,
+				KeyCode::Char('e') => app.state.view = View::Drop,
+				KeyCode::Char('r') => app.state.view = View::Inv,
 				_ => {}
 			}
 		}
